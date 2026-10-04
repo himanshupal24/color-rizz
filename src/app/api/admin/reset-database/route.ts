@@ -95,7 +95,7 @@ export async function POST(request: Request) {
   // Re-initialize default settings
   await db.doc("settings/game").set(DEFAULT_GAME_SETTINGS);
 
-  await logAdminAction(db, {
+  await logAdminAction({
     adminUid,
     action: "DATABASE_RESET",
     targetType: "settings",

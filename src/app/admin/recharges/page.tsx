@@ -88,6 +88,7 @@ export default function AdminRechargesPage() {
     const userInfo = userOf(r.uid);
     const matchesStatus = statusFilter === "all" || r.status === statusFilter;
     const matchesSearch =
+      userInfo.email?.toLowerCase().includes(search.toLowerCase()) ||
       userInfo.phone?.toLowerCase().includes(search.toLowerCase()) ||
       userInfo.displayName?.toLowerCase().includes(search.toLowerCase()) ||
       r.uid?.toLowerCase().includes(search.toLowerCase()) ||
@@ -270,7 +271,7 @@ export default function AdminRechargesPage() {
                                   id: r.id,
                                   action: "approve",
                                   amount: r.amount,
-                                  userEmail: userInfo.email,
+                                  userEmail: userInfo.email || "",
                                   reason: "",
                                 })
                               }
@@ -285,7 +286,7 @@ export default function AdminRechargesPage() {
                                   id: r.id,
                                   action: "reject",
                                   amount: r.amount,
-                                  userEmail: userInfo.email,
+                                  userEmail: userInfo.email || "",
                                   reason: "",
                                 })
                               }

@@ -112,6 +112,7 @@ export function useUserDirectory(maxUsers = 1000) {
     emailOf,
     userOf,
     uidOfIdentifier,
+    uidOfPhone: uidOfIdentifier,
     loading,
   };
 }

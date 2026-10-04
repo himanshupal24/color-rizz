@@ -89,6 +89,7 @@ export default function AdminWithdrawalsPage() {
     const userInfo = userOf(w.uid);
     const matchesStatus = statusFilter === "all" || w.status === statusFilter;
     const matchesSearch =
+      userInfo.email?.toLowerCase().includes(search.toLowerCase()) ||
       userInfo.phone?.toLowerCase().includes(search.toLowerCase()) ||
       userInfo.displayName?.toLowerCase().includes(search.toLowerCase()) ||
       w.uid?.toLowerCase().includes(search.toLowerCase()) ||
@@ -283,7 +284,7 @@ export default function AdminWithdrawalsPage() {
                                   id: w.id,
                                   action: "approve",
                                   amount: w.amount,
-                                  userEmail: userInfo.email,
+                                  userEmail: userInfo.email || "",
                                   reason: "",
                                 })
                               }
@@ -298,7 +299,7 @@ export default function AdminWithdrawalsPage() {
                                   id: w.id,
                                   action: "reject",
                                   amount: w.amount,
-                                  userEmail: userInfo.email,
+                                  userEmail: userInfo.email || "",
                                   reason: "",
                                 })
                               }
