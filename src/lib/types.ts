@@ -17,7 +17,8 @@ export type ReferralRewardStatus = "pending" | "credited" | "unlocked" | "expire
 
 export interface UserProfile {
   uid: string;
-  phone: string;
+  email?: string;
+  phone?: string;
   displayName?: string;
   role: UserRole;
   balance: number; // Total playable balance (cashBalance + bonusBalance + unlockedBonusBalance)

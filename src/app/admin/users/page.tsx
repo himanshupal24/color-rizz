@@ -15,6 +15,7 @@ import {
   Wallet,
   Calendar,
   Sparkles,
+  Mail,
   Phone,
 } from "lucide-react";
 
@@ -40,6 +41,7 @@ export default function AdminUsersPage() {
 
   const filteredUsers = users.filter((u) => {
     const matchesSearch =
+      u.email?.toLowerCase().includes(search.toLowerCase()) ||
       u.phone?.toLowerCase().includes(search.toLowerCase()) ||
       u.uid?.toLowerCase().includes(search.toLowerCase()) ||
       u.displayName?.toLowerCase().includes(search.toLowerCase()) ||
@@ -111,7 +113,7 @@ export default function AdminUsersPage() {
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Search by phone, name, UID, or referral code..."
+            placeholder="Search by email, phone, name, UID, or referral code..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full rounded-xl bg-slate-50 pl-9 pr-4 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -167,14 +169,14 @@ export default function AdminUsersPage() {
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 font-bold text-slate-700 text-xs">
-                            {u.displayName?.slice(0, 1) || u.phone?.slice(-2) || "U"}
+                            {u.displayName?.slice(0, 1) || u.email?.slice(0, 1).toUpperCase() || "U"}
                           </div>
                           <div>
                             <p className="font-bold text-slate-900">{u.displayName || "Player"}</p>
-                            <p className="font-mono text-[11px] text-slate-500">{u.phone}</p>
-                            <p className="font-mono text-[9px] text-slate-400 truncate max-w-[120px]">
-                              {u.uid}
-                            </p>
+                            <p className="font-mono text-[11px] text-slate-600">{u.email || u.phone}</p>
+                            {u.phone && u.email && (
+                              <p className="text-[10px] text-slate-400">{u.phone}</p>
+                            )}
                           </div>
                         </div>
                       </td>

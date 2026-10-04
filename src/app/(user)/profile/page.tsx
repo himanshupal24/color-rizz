@@ -33,16 +33,14 @@ export default function ProfilePage() {
 
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [nameInput, setNameInput] = useState("");
+  const [phoneInput, setPhoneInput] = useState("");
   const [saving, setSaving] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
 
   useEffect(() => {
-    if (profile?.displayName) {
-      setNameInput(profile.displayName);
-    } else {
-      setNameInput("");
-    }
-  }, [profile?.displayName]);
+    setNameInput(profile?.displayName || "");
+    setPhoneInput(profile?.phone ? profile.phone.replace(/^\+91/, "") : "");
+  }, [profile?.displayName, profile?.phone]);
 
   function copyReferralCode() {
     if (!profile?.referralCode) return;
@@ -52,17 +50,23 @@ export default function ProfilePage() {
     setTimeout(() => setCopiedCode(false), 2000);
   }
 
-  async function handleSaveName(e: React.FormEvent) {
+  async function handleSaveProfile(e: React.FormEvent) {
     e.preventDefault();
     if (!user) return;
 
-    const trimmed = nameInput.trim();
-    if (trimmed.length > 0 && trimmed.length < 2) {
+    const trimmedName = nameInput.trim();
+    if (trimmedName.length > 0 && trimmedName.length < 2) {
       toast.error("Name must be at least 2 characters");
       return;
     }
-    if (trimmed.length > 30) {
+    if (trimmedName.length > 30) {
       toast.error("Name cannot exceed 30 characters");
+      return;
+    }
+
+    const cleanPhone = phoneInput.trim().replace(/\D/g, "");
+    if (cleanPhone.length > 0 && cleanPhone.length !== 10) {
+      toast.error("Please enter a valid 10-digit mobile number");
       return;
     }
 
@@ -75,7 +79,10 @@ export default function ProfilePage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ displayName: trimmed }),
+        body: JSON.stringify({
+          displayName: trimmedName,
+          phone: cleanPhone || "",
+        }),
       });
 
       const data = await res.json();
@@ -83,7 +90,7 @@ export default function ProfilePage() {
         throw new Error(data.error || "Failed to update profile");
       }
 
-      toast.success("Profile name updated successfully!");
+      toast.success("Profile updated successfully!");
       setEditModalOpen(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Update failed");
@@ -92,8 +99,12 @@ export default function ProfilePage() {
     }
   }
 
-  const displayName = profile?.displayName || "Player " + (profile?.phone?.slice(-4) || "");
-  const initials = (profile?.displayName || profile?.phone || "U")
+  const displayName =
+    profile?.displayName ||
+    profile?.email?.split("@")[0] ||
+    (profile?.phone ? `Player ${profile.phone.slice(-4)}` : "Player");
+
+  const initials = (profile?.displayName || profile?.email || profile?.phone || "U")
     .replace(/[^a-zA-Z0-9]/g, "")
     .slice(0, 2)
     .toUpperCase();
@@ -116,7 +127,7 @@ export default function ProfilePage() {
                 <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-emerald-400 ring-2 ring-indigo-600" />
               </div>
 
-              {/* Name & Phone */}
+              {/* Name, Email & Phone */}
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
                   <h1 className="text-base font-bold tracking-tight text-white truncate max-w-[150px] sm:max-w-xs">
@@ -126,14 +137,21 @@ export default function ProfilePage() {
                     type="button"
                     onClick={() => setEditModalOpen(true)}
                     className="shrink-0 rounded-lg bg-white/20 p-1 text-blue-100 hover:bg-white/30 hover:text-white active:scale-95 transition-all"
-                    title="Edit Name"
+                    title="Edit Name & Phone"
                   >
                     <Pencil className="h-3 w-3" />
                   </button>
                 </div>
+                {profile?.email && (
+                  <p className="text-[11px] text-blue-100/90 truncate max-w-[180px] sm:max-w-xs">
+                    {profile.email}
+                  </p>
+                )}
                 <div className="mt-0.5 flex items-center gap-1 text-xs text-blue-100 font-medium">
                   <Phone className="h-3 w-3 opacity-80 shrink-0" />
-                  <span className="truncate">{profile?.phone || "—"}</span>
+                  <span className="truncate">
+                    {profile?.phone ? profile.phone : "Add mobile number"}
+                  </span>
                 </div>
               </div>
             </div>
@@ -376,7 +394,7 @@ export default function ProfilePage() {
         </button>
       </div>
 
-      {/* Edit Profile / Name Modal */}
+      {/* Edit Profile / Name & Phone Modal */}
       {editModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl space-y-4">
@@ -385,7 +403,7 @@ export default function ProfilePage() {
                 <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
                   <Pencil className="h-4 w-4" />
                 </div>
-                <h3 className="text-sm font-bold text-slate-800">Edit Profile Name</h3>
+                <h3 className="text-sm font-bold text-slate-800">Edit Profile Details</h3>
               </div>
               <button
                 type="button"
@@ -397,19 +415,19 @@ export default function ProfilePage() {
             </div>
 
             <p className="text-xs text-slate-500">
-              Set a display name for your profile and leaderboard ranking.
+              Update your player username and linked mobile number.
             </p>
 
-            <form onSubmit={handleSaveName} className="space-y-4">
+            <form onSubmit={handleSaveProfile} className="space-y-3.5">
               <div>
-                <label className="text-[11px] font-semibold text-slate-600">Display Name</label>
+                <label className="text-[11px] font-semibold text-slate-700">Display Name</label>
                 <input
                   type="text"
                   placeholder="Enter your name (e.g. Alex Sharma)"
                   value={nameInput}
                   maxLength={30}
                   onChange={(e) => setNameInput(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs font-medium text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
+                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-medium text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
                   autoFocus
                 />
                 <div className="mt-1 flex justify-between text-[10px] text-slate-400">
@@ -418,7 +436,27 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-1">
+              <div>
+                <label className="text-[11px] font-semibold text-slate-700">Mobile Phone Number</label>
+                <div className="relative mt-1">
+                  <span className="absolute left-3 top-2 text-xs font-bold text-slate-400 select-none">
+                    +91
+                  </span>
+                  <input
+                    type="tel"
+                    placeholder="9876543210"
+                    maxLength={10}
+                    value={phoneInput}
+                    onChange={(e) => setPhoneInput(e.target.value.replace(/\D/g, ""))}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-3 py-2 text-xs font-medium font-mono text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
+                  />
+                </div>
+                <p className="mt-1 text-[10px] text-slate-400">
+                  Used for withdrawals and recharge transaction confirmations.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setEditModalOpen(false)}

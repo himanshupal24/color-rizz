@@ -22,6 +22,7 @@ import {
   Search,
   Filter,
   User,
+  Mail,
   Phone,
   Sparkles,
 } from "lucide-react";
@@ -37,7 +38,7 @@ export default function AdminRechargesPage() {
     id: string;
     action: "approve" | "reject";
     amount: number;
-    userPhone: string;
+    userEmail: string;
     reason: string;
   } | null>(null);
   const [processing, setProcessing] = useState(false);

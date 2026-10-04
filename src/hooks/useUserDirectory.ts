@@ -6,18 +6,19 @@ import { db } from "@/lib/firebase/client";
 
 export type UserDirectoryEntry = {
   uid: string;
-  phone: string;
+  email: string;
+  phone?: string;
   displayName?: string;
   referralCode?: string;
 };
 
 /**
  * Live uid ↔ user profile directory for admin screens.
- * Replaces raw UIDs with registered phone numbers & names in tables and dashboards.
+ * Replaces raw UIDs with registered emails & names in tables and dashboards.
  */
 export function useUserDirectory(maxUsers = 1000) {
   const [usersByUid, setUsersByUid] = useState<Record<string, UserDirectoryEntry>>({});
-  const [byPhone, setByPhone] = useState<Record<string, string>>({});
+  const [byIdentifier, setByIdentifier] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -27,32 +28,39 @@ export function useUserDirectory(maxUsers = 1000) {
       q,
       (snap) => {
         const nextUsersByUid: Record<string, UserDirectoryEntry> = {};
-        const nextByPhone: Record<string, string> = {};
+        const nextByIdentifier: Record<string, string> = {};
 
         for (const doc of snap.docs) {
           const data = doc.data();
+          const email = String(data.email ?? "").trim();
           const phone = String(data.phone ?? "").trim();
           const displayName = String(data.displayName ?? "").trim();
           const referralCode = String(data.referralCode ?? "").trim();
 
+          const primaryId = email || phone || doc.id;
+
           const entry: UserDirectoryEntry = {
             uid: doc.id,
-            phone: phone || doc.id,
+            email: primaryId,
+            phone: phone || undefined,
             displayName: displayName || undefined,
             referralCode: referralCode || undefined,
           };
 
           nextUsersByUid[doc.id] = entry;
 
+          if (email) {
+            nextByIdentifier[email.toLowerCase()] = doc.id;
+          }
           if (phone) {
-            nextByPhone[phone] = doc.id;
+            nextByIdentifier[phone] = doc.id;
             const digits = phone.replace(/\D/g, "");
-            if (digits) nextByPhone[digits] = doc.id;
+            if (digits) nextByIdentifier[digits] = doc.id;
           }
         }
 
         setUsersByUid(nextUsersByUid);
-        setByPhone(nextByPhone);
+        setByIdentifier(nextByIdentifier);
         setLoading(false);
       },
       () => setLoading(false),
@@ -62,32 +70,48 @@ export function useUserDirectory(maxUsers = 1000) {
   const phoneOf = useMemo(
     () => (uid?: string | null) => {
       if (!uid) return "—";
-      return usersByUid[uid]?.phone ?? uid;
+      return usersByUid[uid]?.email ?? usersByUid[uid]?.phone ?? uid;
+    },
+    [usersByUid],
+  );
+
+  const emailOf = useMemo(
+    () => (uid?: string | null) => {
+      if (!uid) return "—";
+      return usersByUid[uid]?.email ?? uid;
     },
     [usersByUid],
   );
 
   const userOf = useMemo(
     () => (uid?: string | null): UserDirectoryEntry => {
-      if (!uid) return { uid: "", phone: "—" };
+      if (!uid) return { uid: "", email: "—" };
       return (
         usersByUid[uid] ?? {
           uid,
-          phone: uid,
+          email: uid,
         }
       );
     },
     [usersByUid],
   );
 
-  const uidOfPhone = useMemo(
-    () => (phone?: string | null) => {
-      if (!phone) return undefined;
-      const trimmed = phone.trim();
-      return byPhone[trimmed] ?? byPhone[trimmed.replace(/\D/g, "")];
+  const uidOfIdentifier = useMemo(
+    () => (identifier?: string | null) => {
+      if (!identifier) return undefined;
+      const trimmed = identifier.trim().toLowerCase();
+      return byIdentifier[trimmed] ?? byIdentifier[trimmed.replace(/\D/g, "")];
     },
-    [byPhone],
+    [byIdentifier],
   );
 
-  return { usersByUid, byPhone, phoneOf, userOf, uidOfPhone, loading };
+  return {
+    usersByUid,
+    byIdentifier,
+    phoneOf,
+    emailOf,
+    userOf,
+    uidOfIdentifier,
+    loading,
+  };
 }

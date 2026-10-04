@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   const ip = getClientIp(request);
   const rateLimit = checkRateLimit({
     key: `register:${ip}`,
-    limit: 5,
+    limit: 10,
     windowMs: 60000,
   });
 
@@ -23,18 +23,26 @@ export async function POST(request: Request) {
   }
 
   const body = (await request.json()) as {
-    phone?: string;
-    otp?: string;
+    email?: string;
     password?: string;
+    phone?: string;
     referralCode?: string;
+    displayName?: string;
   };
 
-  const phone = body.phone ? normalizePhone(body.phone) : "";
-  const otp = body.otp?.trim() ?? "";
+  const email = body.email?.trim().toLowerCase() ?? "";
   const password = body.password ?? "";
+  const rawPhone = body.phone?.trim() ?? "";
+  const phone = rawPhone ? normalizePhone(rawPhone) : "";
+  const displayName = body.displayName?.trim() ?? "";
 
-  if (!phone || !otp || password.length < 6) {
-    return NextResponse.json({ error: "Invalid registration data" }, { status: 400 });
+  // Email format validation
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return NextResponse.json({ error: "Please enter a valid email address" }, { status: 400 });
+  }
+
+  if (password.length < 6) {
+    return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 });
   }
 
   const db = getAdminDb();
@@ -43,25 +51,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Server not configured" }, { status: 503 });
   }
 
-  const otpRef = db.doc(`phoneOtps/${phone.replace(/\+/g, "")}`);
-  const otpSnap = await otpRef.get();
-  if (!otpSnap.exists) {
-    return NextResponse.json({ error: "OTP not found. Send OTP first." }, { status: 400 });
-  }
-  const otpData = otpSnap.data()!;
-  if (otpData.expiresAt < Date.now() || otpData.otp !== otp) {
-    return NextResponse.json({ error: "Invalid or expired OTP" }, { status: 400 });
-  }
-
-  const email = phoneToAuthEmail(phone);
   let uid: string;
 
   try {
     const existing = await auth.getUserByEmail(email).catch(() => null);
     if (existing) {
-      return NextResponse.json({ error: "Phone already registered" }, { status: 409 });
+      return NextResponse.json({ error: "Email is already registered. Please login instead." }, { status: 409 });
     }
-    const user = await auth.createUser({ email, password, phoneNumber: phone });
+    const user = await auth.createUser({
+      email,
+      password,
+      displayName: displayName || undefined,
+      phoneNumber: phone || undefined,
+    });
     uid = user.uid;
   } catch (e) {
     const message = e instanceof Error ? e.message : "Registration failed";
@@ -80,7 +82,7 @@ export async function POST(request: Request) {
     if (!refSnap.empty) {
       const candidateReferrer = refSnap.docs[0]!;
       // Prevent self-referral
-      if (candidateReferrer.id !== uid && candidateReferrer.data()?.phone !== phone) {
+      if (candidateReferrer.id !== uid && candidateReferrer.data()?.email !== email) {
         referredBy = candidateReferrer.id;
       }
     }
@@ -95,7 +97,10 @@ export async function POST(request: Request) {
 
   await db.runTransaction(async (tx) => {
     tx.set(userDocRef, {
-      phone,
+      uid,
+      email,
+      phone: phone || "",
+      displayName: displayName || email.split("@")[0],
       role: "user",
       balance: 0,
       cashBalance: 0,
@@ -115,14 +120,12 @@ export async function POST(request: Request) {
         tx,
         referredBy,
         uid,
-        phone,
+        phone || email,
         referralBonusAmount,
         wagerMultiplier,
       );
     }
   });
-
-  await otpRef.delete();
 
   return NextResponse.json({ ok: true, uid });
 }
