@@ -188,7 +188,7 @@ export default function AdminRechargesPage() {
             <thead className="bg-slate-50 font-semibold text-slate-600 border-b border-slate-200">
               <tr>
                 <th className="px-4 py-3">Date</th>
-                <th className="px-4 py-3">Player Details</th>
+                <th className="px-4 py-3">Player / Email</th>
                 <th className="px-4 py-3">Amount</th>
                 <th className="px-4 py-3">UTR / Reference</th>
                 <th className="px-4 py-3">Status</th>
@@ -224,15 +224,17 @@ export default function AdminRechargesPage() {
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 text-blue-600 font-bold text-xs">
-                            <Phone className="h-3.5 w-3.5" />
+                            <Mail className="h-3.5 w-3.5" />
                           </div>
                           <div>
-                            <p className="font-bold text-slate-900 font-mono text-xs">{userInfo.phone}</p>
+                            <p className="font-bold text-slate-900 text-xs truncate max-w-[160px] sm:max-w-xs">
+                              {userInfo.email}
+                            </p>
                             {userInfo.displayName && (
                               <p className="text-[11px] text-slate-500">{userInfo.displayName}</p>
                             )}
-                            {userInfo.referralCode && (
-                              <p className="text-[10px] text-slate-400">Code: {userInfo.referralCode}</p>
+                            {userInfo.phone && userInfo.phone !== userInfo.email && (
+                              <p className="text-[10px] text-slate-400">Tel: {userInfo.phone}</p>
                             )}
                           </div>
                         </div>
@@ -268,7 +270,7 @@ export default function AdminRechargesPage() {
                                   id: r.id,
                                   action: "approve",
                                   amount: r.amount,
-                                  userPhone: userInfo.phone,
+                                  userEmail: userInfo.email,
                                   reason: "",
                                 })
                               }
@@ -283,7 +285,7 @@ export default function AdminRechargesPage() {
                                   id: r.id,
                                   action: "reject",
                                   amount: r.amount,
-                                  userPhone: userInfo.phone,
+                                  userEmail: userInfo.email,
                                   reason: "",
                                 })
                               }
@@ -314,8 +316,8 @@ export default function AdminRechargesPage() {
             </h3>
             <p className="text-xs text-slate-600">
               {actionModal.action === "approve"
-                ? `Confirm crediting ${formatCurrency(actionModal.amount)} to player (${actionModal.userPhone})?`
-                : `Are you sure you want to reject this deposit request for player (${actionModal.userPhone})?`}
+                ? `Confirm crediting ${formatCurrency(actionModal.amount)} to player (${actionModal.userEmail})?`
+                : `Are you sure you want to reject this deposit request for player (${actionModal.userEmail})?`}
             </p>
 
             <div>

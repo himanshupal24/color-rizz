@@ -24,6 +24,7 @@ import {
   CreditCard,
   Building2,
   User,
+  Mail,
   Phone,
 } from "lucide-react";
 
@@ -38,7 +39,7 @@ export default function AdminWithdrawalsPage() {
     id: string;
     action: "approve" | "reject";
     amount: number;
-    userPhone: string;
+    userEmail: string;
     reason: string;
   } | null>(null);
   const [processing, setProcessing] = useState(false);
@@ -190,7 +191,7 @@ export default function AdminWithdrawalsPage() {
             <thead className="bg-slate-50 font-semibold text-slate-600 border-b border-slate-200">
               <tr>
                 <th className="px-4 py-3">Date</th>
-                <th className="px-4 py-3">Player Details</th>
+                <th className="px-4 py-3">Player / Email</th>
                 <th className="px-4 py-3">Amount</th>
                 <th className="px-4 py-3">Bank / Payout Destination</th>
                 <th className="px-4 py-3">Status</th>
@@ -226,15 +227,17 @@ export default function AdminWithdrawalsPage() {
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-50 text-purple-600 font-bold text-xs">
-                            <Phone className="h-3.5 w-3.5" />
+                            <Mail className="h-3.5 w-3.5" />
                           </div>
                           <div>
-                            <p className="font-bold text-slate-900 font-mono text-xs">{userInfo.phone}</p>
+                            <p className="font-bold text-slate-900 text-xs truncate max-w-[160px] sm:max-w-xs">
+                              {userInfo.email}
+                            </p>
                             {userInfo.displayName && (
                               <p className="text-[11px] text-slate-500">{userInfo.displayName}</p>
                             )}
-                            {userInfo.referralCode && (
-                              <p className="text-[10px] text-slate-400">Code: {userInfo.referralCode}</p>
+                            {userInfo.phone && userInfo.phone !== userInfo.email && (
+                              <p className="text-[10px] text-slate-400">Tel: {userInfo.phone}</p>
                             )}
                           </div>
                         </div>
@@ -280,7 +283,7 @@ export default function AdminWithdrawalsPage() {
                                   id: w.id,
                                   action: "approve",
                                   amount: w.amount,
-                                  userPhone: userInfo.phone,
+                                  userEmail: userInfo.email,
                                   reason: "",
                                 })
                               }
@@ -295,7 +298,7 @@ export default function AdminWithdrawalsPage() {
                                   id: w.id,
                                   action: "reject",
                                   amount: w.amount,
-                                  userPhone: userInfo.phone,
+                                  userEmail: userInfo.email,
                                   reason: "",
                                 })
                               }
@@ -326,8 +329,8 @@ export default function AdminWithdrawalsPage() {
             </h3>
             <p className="text-xs text-slate-600">
               {actionModal.action === "approve"
-                ? `Confirm that ${formatCurrency(actionModal.amount)} has been transferred to player (${actionModal.userPhone})?`
-                : `Rejecting this will return ${formatCurrency(actionModal.amount)} to player (${actionModal.userPhone}) balance.`}
+                ? `Confirm that ${formatCurrency(actionModal.amount)} has been transferred to player (${actionModal.userEmail})?`
+                : `Rejecting this will return ${formatCurrency(actionModal.amount)} to player (${actionModal.userEmail}) balance.`}
             </p>
 
             <div>

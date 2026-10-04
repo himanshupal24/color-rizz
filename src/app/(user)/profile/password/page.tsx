@@ -52,14 +52,17 @@ export default function PasswordPage() {
       toast.error("New passwords do not match");
       return;
     }
-    if (!auth?.currentUser || !profile?.phone) {
+    if (!auth?.currentUser || (!profile?.email && !profile?.phone && !auth.currentUser.email)) {
       toast.error("User session expired. Please log in again.");
       return;
     }
 
     setLoading(true);
     try {
-      const email = phoneToAuthEmail(normalizePhone(profile.phone));
+      const email =
+        auth.currentUser.email ||
+        profile?.email ||
+        (profile?.phone ? phoneToAuthEmail(normalizePhone(profile.phone)) : "");
       const cred = EmailAuthProvider.credential(email, oldPassword);
       await reauthenticateWithCredential(auth.currentUser, cred);
       await updatePassword(auth.currentUser, newPassword);

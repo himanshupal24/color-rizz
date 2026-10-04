@@ -71,7 +71,7 @@ export default function AdminTransactionsPage() {
             <thead>
               <tr>
                 <Th>Type</Th>
-                <Th>Phone</Th>
+                <Th>Player / Email</Th>
                 <Th>Amount</Th>
                 <Th>Status</Th>
                 <Th>Time</Th>

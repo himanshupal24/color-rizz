@@ -9,8 +9,8 @@ import { db } from "@/lib/firebase/client";
 import type { AppNotification } from "@/lib/types";
 
 export default function AdminNotificationsPage() {
-  const { uidOfPhone } = useUserDirectory();
-  const [phone, setPhone] = useState("");
+  const { uidOfIdentifier, phoneOf } = useUserDirectory();
+  const [target, setTarget] = useState("");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [loading, setLoading] = useState(false);
@@ -34,13 +34,13 @@ export default function AdminNotificationsPage() {
       return;
     }
 
-    const trimmedPhone = phone.trim();
+    const trimmedTarget = target.trim();
     let targetUid: string | null = null;
 
-    if (trimmedPhone) {
-      targetUid = uidOfPhone(trimmedPhone) ?? null;
+    if (trimmedTarget) {
+      targetUid = uidOfIdentifier(trimmedTarget) ?? null;
       if (!targetUid) {
-        toast.error("No registered user found with that phone number");
+        toast.error("No registered user found with that email or phone number");
         return;
       }
     }
@@ -56,12 +56,12 @@ export default function AdminNotificationsPage() {
       });
       toast.success(
         targetUid
-          ? `Notification dispatched to user ${trimmedPhone}`
+          ? `Notification dispatched to user (${trimmedTarget})`
           : "Global broadcast notification sent to all players!"
       );
       setTitle("");
       setBody("");
-      setPhone("");
+      setTarget("");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to send notification");
     } finally {
@@ -94,13 +94,13 @@ export default function AdminNotificationsPage() {
           <form onSubmit={onSubmit} className="space-y-4">
             <div>
               <label className="text-xs font-semibold text-slate-700">
-                Target User Phone Number (Leave blank for ALL users)
+                Target User Email or Phone (Leave blank for ALL users)
               </label>
               <input
                 type="text"
-                placeholder="e.g. 9876543210 (or blank for broadcast)"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                placeholder="e.g. alex@example.com (or blank for broadcast)"
+                value={target}
+                onChange={(e) => setTarget(e.target.value)}
                 className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs font-medium text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all font-mono"
               />
             </div>
@@ -135,7 +135,7 @@ export default function AdminNotificationsPage() {
               className="w-full flex items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-xs font-bold text-white shadow-md shadow-blue-600/25 hover:bg-blue-700 active:scale-98 transition-all disabled:opacity-50"
             >
               <Send className="h-4 w-4" />
-              {loading ? "Sending Notification..." : phone ? "Send to User" : "Send Global Broadcast"}
+              {loading ? "Sending Notification..." : target ? "Send to User" : "Send Global Broadcast"}
             </button>
           </form>
         </div>
@@ -170,8 +170,8 @@ export default function AdminNotificationsPage() {
 
           <div className="rounded-2xl bg-slate-800/40 p-4 text-xs text-slate-400 space-y-1.5 border border-slate-800">
             <p className="font-bold text-slate-300">Delivery Guidelines:</p>
-            <p>• Leaving phone blank delivers the alert to all registered active players.</p>
-            <p>• Target notifications are ideal for recharge verifications and custom bonuses.</p>
+            <p>• Leaving target blank delivers the alert to all registered active players.</p>
+            <p>• Target notifications are ideal for custom bonuses and personalized messages.</p>
           </div>
         </div>
       </div>
@@ -206,8 +206,8 @@ export default function AdminNotificationsPage() {
                   </td>
                   <td className="px-4 py-3 font-mono">
                     {n.uid ? (
-                      <span className="rounded-md bg-blue-50 px-2 py-0.5 text-blue-700 font-bold">
-                        User: {n.uid.slice(0, 8)}...
+                      <span className="rounded-md bg-blue-50 px-2 py-0.5 text-blue-700 font-bold truncate max-w-[150px] inline-block">
+                        {phoneOf(n.uid)}
                       </span>
                     ) : (
                       <span className="rounded-md bg-purple-50 px-2 py-0.5 text-purple-700 font-bold">
