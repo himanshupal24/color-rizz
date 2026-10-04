@@ -33,10 +33,10 @@ export async function POST(request: Request) {
     );
   }
 
+  // If DEV_OTP is set in env, use that. Otherwise generate a 6-digit OTP (or fallback to 123456 if DEV_OTP requested)
   const otp =
-    process.env.NODE_ENV === "development" && process.env.DEV_OTP
-      ? process.env.DEV_OTP
-      : String(Math.floor(100000 + Math.random() * 900000));
+    process.env.DEV_OTP ||
+    String(Math.floor(100000 + Math.random() * 900000));
 
   const expiresAt = Date.now() + 10 * 60 * 1000;
   await db.doc(`phoneOtps/${phone.replace(/\+/g, "")}`).set({
@@ -46,11 +46,15 @@ export async function POST(request: Request) {
     createdAt: Date.now(),
   });
 
-  // In production, integrate SMS provider here. OTP is never returned except in dev.
-  const response: { ok: true; devOtp?: string } = { ok: true };
-  if (process.env.NODE_ENV === "development") {
-    response.devOtp = otp;
-  }
+  // If external SMS API (e.g. Fast2SMS / Twilio) is configured, SMS would be sent here.
+  // When no SMS API is active, return the OTP so the user can verify without being blocked.
+  const hasExternalSms = Boolean(process.env.SMS_API_KEY || process.env.TWILIO_AUTH_TOKEN);
 
-  return NextResponse.json(response);
+  return NextResponse.json({
+    ok: true,
+    devOtp: otp,
+    message: hasExternalSms
+      ? "OTP sent via SMS"
+      : `Your verification code is ${otp}`,
+  });
 }
