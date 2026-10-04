@@ -2,11 +2,17 @@ import { NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { advanceGameRound } from "@/lib/game-engine";
 
-export async function POST(request: Request) {
+async function handleTick(request: Request) {
   const secret = process.env.GAME_TICK_SECRET;
   if (secret) {
     const header = request.headers.get("x-game-tick-secret");
-    if (header !== secret) {
+    const authHeader = request.headers.get("authorization");
+    const isCronAuthorized =
+      header === secret ||
+      authHeader === `Bearer ${secret}` ||
+      authHeader === `Bearer ${process.env.CRON_SECRET}`;
+
+    if (!isCronAuthorized) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
   }
@@ -18,4 +24,12 @@ export async function POST(request: Request) {
 
   await advanceGameRound(db);
   return NextResponse.json({ ok: true });
+}
+
+export async function POST(request: Request) {
+  return handleTick(request);
+}
+
+export async function GET(request: Request) {
+  return handleTick(request);
 }

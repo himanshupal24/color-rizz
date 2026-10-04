@@ -13,14 +13,21 @@ export type TransactionType =
 
 export type RequestStatus = "pending" | "approved" | "rejected";
 
+export type ReferralRewardStatus = "pending" | "credited" | "unlocked" | "expired" | "cancelled";
+
 export interface UserProfile {
   uid: string;
   phone: string;
   displayName?: string;
   role: UserRole;
-  balance: number;
+  balance: number; // Total playable balance (cashBalance + bonusBalance + unlockedBonusBalance)
+  cashBalance?: number; // Real withdrawable cash balance
+  bonusBalance?: number; // Locked promotional referral balance
+  unlockedBonusBalance?: number; // Unlocked referral balance eligible for withdrawal
+  totalWagered?: number; // Cumulative bet stakes for wagering unlock progress
   referralCode: string;
   referredBy?: string;
+  referralCreatedAt?: number;
   bankDetails?: BankDetails;
   createdAt: number;
 }
@@ -40,7 +47,28 @@ export interface GameSettings {
   betAmounts: number[];
   multipliers: Record<GameColor, number>;
   upiId: string;
+  /** Telegram support link or @username for recharge assistance */
+  telegramSupportUrl: string;
   referralBonusPercent: number;
+  referralBonusAmount: number; // e.g. 100
+  referralWageringMultiplier: number; // e.g. 1.0 (wager 1x bonus to unlock)
+}
+
+export interface ReferralReward {
+  id: string;
+  referrerUid: string;
+  referrerPhone?: string;
+  referredUid: string;
+  referredPhone?: string;
+  amount: number;
+  type: "REFERRAL_BONUS";
+  status: ReferralRewardStatus;
+  wagerRequirement: number;
+  wagerProgress: number;
+  createdAt: number;
+  creditedAt: number;
+  unlockedAt?: number;
+  notes?: string;
 }
 
 export interface GameRound {
@@ -48,12 +76,28 @@ export interface GameRound {
   period: string;
   status: RoundStatus;
   startsAt: number;
+  bettingClosesAt?: number;
   endsAt: number;
   resultColor?: GameColor;
   resultNumber?: number;
   plannedColor?: GameColor;
   plannedNumber?: number;
   settledAt?: number;
+  createdAt?: number;
+}
+
+export interface RoundStats {
+  roundId: string;
+  period: string;
+  greenBetCount: number;
+  redBetCount: number;
+  violetBetCount: number;
+  totalBetCount: number;
+  greenAmount: number;
+  redAmount: number;
+  violetAmount: number;
+  totalAmount: number;
+  updatedAt: number;
 }
 
 export interface Bet {
@@ -87,6 +131,10 @@ export interface RechargeRequest {
   utr?: string;
   status: RequestStatus;
   createdAt: number;
+  source?: "telegram" | "upi" | "manual";
+  note?: string;
+  processedAt?: number;
+  processedBy?: string;
 }
 
 export interface WithdrawalRequest {

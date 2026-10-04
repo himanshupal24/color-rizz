@@ -25,6 +25,8 @@ function periodId(date = new Date()): string {
 export async function advanceGameRound(db: Firestore): Promise<void> {
   const settings = await getGameSettings(db);
   const now = Date.now();
+  const roundDurationMs = settings.roundDurationSec * 1000;
+  const cutoffMs = 5000; // 5 seconds betting cutoff buffer
 
   const activeSnap = await db
     .collection("rounds")
@@ -34,13 +36,25 @@ export async function advanceGameRound(db: Firestore): Promise<void> {
     .get();
 
   if (activeSnap.empty) {
-    const endsAt = now + settings.roundDurationSec * 1000;
-    await db.collection("rounds").add({
-      period: periodId(),
-      status: "betting",
-      startsAt: now,
-      endsAt,
-      createdAt: now,
+    // Atomically create initial round if no active round exists
+    await db.runTransaction(async (tx) => {
+      const checkSnap = await tx.get(
+        db
+          .collection("rounds")
+          .where("status", "in", ["betting", "locked"])
+          .limit(1)
+      );
+      if (!checkSnap.empty) return;
+
+      const newRoundRef = db.collection("rounds").doc();
+      tx.set(newRoundRef, {
+        period: periodId(new Date(now)),
+        status: "betting",
+        startsAt: now,
+        bettingClosesAt: now + (roundDurationMs - cutoffMs),
+        endsAt: now + roundDurationMs,
+        createdAt: now,
+      });
     });
     return;
   }
@@ -49,18 +63,33 @@ export async function advanceGameRound(db: Firestore): Promise<void> {
   const round = roundDoc.data();
   const roundId = roundDoc.id;
 
-  if (round.status === "betting" && now >= round.endsAt) {
+  const closesAt = round.bettingClosesAt ?? round.endsAt;
+
+  if (round.status === "betting" && now >= closesAt) {
     await roundDoc.ref.update({ status: "locked", lockedAt: now });
     return;
   }
 
   if (round.status === "locked") {
-    const color = round.plannedColor as GameColor | undefined;
-    const number =
-      typeof round.plannedNumber === "number" ? round.plannedNumber : undefined;
+    let color: GameColor | undefined;
+    let number: number | undefined;
+
+    const planRef = db.doc(`round_plans/${roundId}`);
+    const planSnap = await planRef.get();
+    if (planSnap.exists) {
+      const planData = planSnap.data()!;
+      color = planData.plannedColor as GameColor | undefined;
+      number = typeof planData.plannedNumber === "number" ? planData.plannedNumber : undefined;
+    }
 
     if (!color || number === undefined) {
-      return;
+      number = Math.floor(Math.random() * 10);
+      const colorMap: Record<number, GameColor> = {
+        0: "violet", 5: "violet",
+        1: "green", 3: "green", 7: "green", 9: "green",
+        2: "red", 4: "red", 6: "red", 8: "red"
+      };
+      color = colorMap[number]!;
     }
 
     const betsSnap = await db
@@ -72,6 +101,15 @@ export async function advanceGameRound(db: Firestore): Promise<void> {
       const fresh = await tx.get(roundDoc.ref);
       if (!fresh.exists || fresh.data()?.status !== "locked") return;
 
+      const betsWithData: Array<{ ref: import("firebase-admin/firestore").DocumentReference; data: import("firebase-admin/firestore").DocumentData }> = [];
+      for (const betDoc of betsSnap.docs) {
+        const betLive = await tx.get(betDoc.ref);
+        if (betLive.exists) {
+          betsWithData.push({ ref: betDoc.ref, data: betLive.data()! });
+        }
+      }
+
+      // Settle current round
       tx.update(roundDoc.ref, {
         status: "settled",
         resultColor: color,
@@ -79,11 +117,12 @@ export async function advanceGameRound(db: Firestore): Promise<void> {
         settledAt: now,
       });
 
-      for (const betDoc of betsSnap.docs) {
-        const betRef = betDoc.ref;
-        const betLive = await tx.get(betRef);
-        if (!betLive.exists) continue;
-        const bet = betLive.data()!;
+      if (planSnap.exists) {
+        tx.delete(planRef);
+      }
+
+      // Process payouts
+      for (const { ref: betRef, data: bet } of betsWithData) {
         const won = bet.color === color;
         const payout = won
           ? bet.totalStake * (settings.multipliers[color as GameColor] ?? 2)
@@ -109,15 +148,17 @@ export async function advanceGameRound(db: Firestore): Promise<void> {
           });
         }
       }
-    });
 
-    const endsAt = now + settings.roundDurationSec * 1000;
-    await db.collection("rounds").add({
-      period: periodId(),
-      status: "betting",
-      startsAt: now,
-      endsAt,
-      createdAt: now,
+      // Atomically create next round in the SAME commit
+      const nextRoundRef = db.collection("rounds").doc();
+      tx.set(nextRoundRef, {
+        period: periodId(new Date(now)),
+        status: "betting",
+        startsAt: now,
+        bettingClosesAt: now + (roundDurationMs - cutoffMs),
+        endsAt: now + roundDurationMs,
+        createdAt: now,
+      });
     });
   }
 }

@@ -1,30 +1,46 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { useCurrentRound } from "./useGameRound";
+import { useEffect, useRef, useCallback } from "react";
+import type { GameRound } from "@/lib/types";
 
-/** Keeps round lifecycle moving (lock → settle when admin set result). */
-export function useGameTick() {
-  const round = useCurrentRound();
-  const busy = useRef(false);
+/**
+ * Ensures authoritative round transitions (locking when time expires -> settling when locked)
+ * without duplicate listeners or request spam.
+ */
+export function useGameTick(round?: GameRound | null) {
+  const busyRef = useRef(false);
+  const lastTickTimeRef = useRef(0);
 
-  useEffect(() => {
-    if (!round) {
-      void fetch("/api/game/tick", { method: "POST" });
+  const triggerTick = useCallback(async () => {
+    const now = Date.now();
+    // Enforce 1500ms minimum interval between client tick dispatches
+    if (busyRef.current || now - lastTickTimeRef.current < 1500) {
       return;
     }
 
-    const shouldTick =
-      (round.status === "betting" && Date.now() >= round.endsAt) ||
-      round.status === "locked";
+    busyRef.current = true;
+    lastTickTimeRef.current = now;
 
-    if (!shouldTick || busy.current) return;
+    try {
+      await fetch("/api/game/tick", { method: "POST" });
+    } catch {
+      // Ignore network errors; persistent listener and other clients/cron will retry
+    } finally {
+      busyRef.current = false;
+    }
+  }, []);
 
-    busy.current = true;
-    fetch("/api/game/tick", { method: "POST" })
-      .catch(() => undefined)
-      .finally(() => {
-        busy.current = false;
-      });
-  }, [round?.id, round?.status, round?.endsAt]);
+  useEffect(() => {
+    if (!round) {
+      void triggerTick();
+      return;
+    }
+
+    const now = Date.now();
+    if (round.status === "locked" || (round.status === "betting" && now >= round.endsAt)) {
+      void triggerTick();
+    }
+  }, [round?.id, round?.status, round?.endsAt, triggerTick]);
+
+  return triggerTick;
 }

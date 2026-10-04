@@ -1,12 +1,28 @@
 import { NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { normalizePhone } from "@/lib/constants";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limiter";
 
 export async function POST(request: Request) {
+  const ip = getClientIp(request);
   const body = (await request.json()) as { phone?: string };
   const phone = body.phone ? normalizePhone(body.phone) : "";
   if (!phone || phone.length < 12) {
     return NextResponse.json({ error: "Invalid phone number" }, { status: 400 });
+  }
+
+  // Rate limit: max 3 OTP sends per minute per phone and IP
+  const rateLimit = checkRateLimit({
+    key: `otp:${phone}:${ip}`,
+    limit: 3,
+    windowMs: 60000,
+  });
+
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Too many OTP requests. Please wait a minute before requesting another OTP." },
+      { status: 429 },
+    );
   }
 
   const db = getAdminDb();

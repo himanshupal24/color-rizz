@@ -12,7 +12,19 @@ export function getAdminApp(): App | null {
   }
 
   const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  if (!json) return null;
+  if (!json) {
+    if (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
+      try {
+        adminApp = initializeApp({
+          projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        });
+        return adminApp;
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }
 
   try {
     const serviceAccount = JSON.parse(json) as {
@@ -35,7 +47,14 @@ export function getAdminApp(): App | null {
 
 export function getAdminDb() {
   const app = getAdminApp();
-  return app ? getFirestore(app) : null;
+  if (!app) return null;
+  const db = getFirestore(app);
+  try {
+    db.settings({ ignoreUndefinedProperties: true });
+  } catch {
+    // ignore if already applied
+  }
+  return db;
 }
 
 export function getAdminAuth() {

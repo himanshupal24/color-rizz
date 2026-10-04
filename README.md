@@ -1,36 +1,68 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Color Rizz 🎨
 
-## Getting Started
+A modern, high-performance colour prediction & trading platform built with **Next.js 16 (App Router)**, **React 19**, **Tailwind CSS v4**, and **Firebase**.
 
-First, run the development server:
+---
 
+## ✨ Features
+
+- **⚡ Real-time Color Trading Game**:
+  - Live round countdown & visual round timers.
+  - Multi-tier color betting (Green, Violet, Red, Numbers 0-9).
+  - Automated round payout calculation with parity checks and reconciliation.
+- **📱 Responsive User Experience**:
+  - Native app-like experience with animated bottom navigation.
+  - Responsive wallet management (Transactions, Recharge, Withdrawal, Bank Card Linking).
+  - Modern Telegram-support recharge payment flow with UTR submission.
+- **🛡️ Comprehensive Admin Console (`/admin`)**:
+  - Live User Directory (search by phone number, balance breakdown, status management).
+  - Recharges & Payouts approval dashboard (showing player phone numbers, bank snapshots, and quick actions).
+  - Game rounds supervisor & manual override.
+  - Full audit logging & immutable action history.
+  - Dynamic game & system configuration.
+
+---
+
+## 🛠️ Tech Stack
+
+- **Framework**: Next.js 16 (App Router, Turbopack)
+- **UI & Styling**: React 19, Tailwind CSS v4, Lucide Icons, React Hot Toast
+- **Backend & Database**: Firebase Firestore, Firebase Admin SDK, Firebase Auth
+- **Automation**: Vercel Cron (`/api/game/tick`)
+
+---
+
+## 🚀 Getting Started
+
+### 1. Install Dependencies
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Environment Variables
+Create a `.env.local` file based on `.env.example`:
+```env
+NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+FIREBASE_SERVICE_ACCOUNT_JSON={"type":"service_account",...}
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. Run Development Server
+```bash
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## ☁️ Deployment
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Deploy easily to **Vercel**:
+1. Connect your repository (`himanshupal24/color-rizz`) on Vercel.
+2. Add your environment variables in Vercel project settings.
+3. Add your Vercel production domain to **Firebase Console → Authentication → Authorized domains**.
