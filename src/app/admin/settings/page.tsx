@@ -190,7 +190,7 @@ export default function AdminSettingsPage() {
                 <input
                   type="number"
                   min={0}
-                  value={settings.referralBonusAmount ?? 100}
+                  value={settings.referralBonusAmount ?? 300}
                   onChange={(e) =>
                     setSettings({ ...settings, referralBonusAmount: Number(e.target.value) })
                   }
@@ -268,7 +268,7 @@ export default function AdminSettingsPage() {
               <div className="flex items-center justify-between rounded-xl bg-slate-800/80 p-3 border border-slate-700/60">
                 <span className="text-slate-400">Referral Bonus:</span>
                 <span className="font-mono font-bold text-purple-400">
-                  ₹{settings.referralBonusAmount ?? 100} ({settings.referralBonusPercent}%)
+                  ₹{settings.referralBonusAmount ?? 300} ({settings.referralBonusPercent}%)
                 </span>
               </div>
 

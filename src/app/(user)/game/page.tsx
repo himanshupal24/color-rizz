@@ -95,6 +95,7 @@ export default function GamePage() {
   const [settings, setSettings] = useState<GameSettings>(DEFAULT_GAME_SETTINGS);
   const [pick, setPick] = useState<GameColor | null>(null);
   const [betTab, setBetTab] = useState<"all" | "open" | "settled">("all");
+  const [historyLimit, setHistoryLimit] = useState(10);
 
   // Cache settings with single onSnapshot listener
   useEffect(() => {
@@ -384,8 +385,8 @@ export default function GamePage() {
           <span className="text-right">Result</span>
         </div>
 
-        <div className="max-h-72 overflow-y-auto divide-y divide-slate-50">
-          {history.map((r) => (
+        <div className="divide-y divide-slate-50">
+          {history.slice(0, historyLimit).map((r) => (
             <HistoryRow key={r.id} round={r} />
           ))}
 
@@ -393,6 +394,18 @@ export default function GamePage() {
             <p className="p-6 text-center text-xs text-slate-400 font-medium">
               No game records for today yet. New settled rounds will appear here.
             </p>
+          )}
+
+          {history.length > historyLimit && (
+            <div className="border-t border-slate-100 p-3 text-center bg-slate-50/50">
+              <button
+                type="button"
+                onClick={() => setHistoryLimit((prev) => prev + 10)}
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-white px-4 py-2 text-xs font-bold text-blue-600 shadow-xs border border-slate-200 hover:bg-blue-50 hover:border-blue-200 active:scale-95 transition-all cursor-pointer"
+              >
+                Load More Records ({history.length - historyLimit} remaining)
+              </button>
+            </div>
           )}
         </div>
       </div>
