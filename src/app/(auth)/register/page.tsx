@@ -70,7 +70,7 @@ export default function RegisterPage() {
             <UserPlus className="h-6 w-6" />
           </div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Create Account</h1>
-          <p className="text-xs text-slate-500">Join Color Rizz with your email or Google account</p>
+          <p className="text-xs text-slate-500">Join Win Win Go with your email or Google account</p>
         </div>
 
         {/* Google Sign-In Button */}

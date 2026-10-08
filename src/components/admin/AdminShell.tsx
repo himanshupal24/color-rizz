@@ -52,7 +52,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 text-white font-extrabold shadow-sm">
             <Flame className="h-4 w-4 text-yellow-300 fill-yellow-300" />
           </div>
-          <span className="font-extrabold text-sm tracking-tight text-white">COLOR RIZZ ADMIN</span>
+          <span className="font-extrabold text-sm tracking-tight text-white">WIN WIN GO ADMIN</span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -87,7 +87,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 <Flame className="h-5 w-5 text-yellow-300 fill-yellow-300" />
               </div>
               <div>
-                <span className="font-extrabold text-sm tracking-tight text-white">COLOR RIZZ</span>
+                <span className="font-extrabold text-sm tracking-tight text-white">WIN WIN GO</span>
                 <p className="text-[10px] text-blue-400 font-bold uppercase tracking-wider">Admin Console</p>
               </div>
             </div>

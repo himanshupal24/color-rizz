@@ -14,7 +14,7 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
   telegramSupportUrl:
     process.env.NEXT_PUBLIC_TELEGRAM_SUPPORT ?? "https://t.me/",
   referralBonusPercent: 5,
-  referralBonusAmount: 100,
+  referralBonusAmount: 300,
   referralWageringMultiplier: 1.0,
 };
 

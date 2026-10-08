@@ -6,8 +6,8 @@ import { getGameSettings } from "@/lib/game-engine";
 import { checkIdempotency, completeIdempotency } from "@/lib/idempotency";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limiter";
 import { recordLatency, recordMetric } from "@/lib/metrics";
-import { processBetDeductionAndWagering } from "@/lib/referral-engine";
-import type { GameColor } from "@/lib/types";
+import { processBetDeductionAndWagering, calculateUserBalances } from "@/lib/referral-engine";
+import type { GameColor, UserProfile } from "@/lib/types";
 
 export async function POST(request: Request) {
   const start = Date.now();
@@ -102,7 +102,53 @@ export async function POST(request: Request) {
         throw new Error("Betting closed for this round");
       }
       if (!userSnap.exists) throw new Error("User not found");
+
+      const userData = userSnap.data() as UserProfile;
+
+      // Read referrer snapshot if user was referred by someone and referral commission > 0
+      let referrerSnap: import("firebase-admin/firestore").DocumentSnapshot | null = null;
+      let referrerRef: import("firebase-admin/firestore").DocumentReference | null = null;
+      if (userData.referredBy && userData.referredBy !== decoded.uid && (settings.referralBonusPercent ?? 0) > 0) {
+        referrerRef = db.doc(`users/${userData.referredBy}`);
+        referrerSnap = await tx.get(referrerRef);
+      }
+
       await processBetDeductionAndWagering(db, tx, userRef, userSnap, totalStake);
+
+      // Credit referral bet commission to referrer's bonus balance (playable, non-withdrawable)
+      if (referrerSnap && referrerSnap.exists && referrerRef) {
+        const referrerData = referrerSnap.data() as UserProfile;
+        const commissionPct = settings.referralBonusPercent ?? 5;
+        const commission = Number(((totalStake * commissionPct) / 100).toFixed(2));
+        if (commission > 0) {
+          const balances = calculateUserBalances(referrerData);
+          const newBonusBalance = Number((balances.bonusBalance + commission).toFixed(2));
+          const newPlayableBalance = Number((balances.playableBalance + commission).toFixed(2));
+
+          tx.update(referrerRef, {
+            bonusBalance: newBonusBalance,
+            balance: newPlayableBalance,
+          });
+
+          const identifier = userData.email || userData.phone || "downline";
+          tx.set(db.collection("transactions").doc(), {
+            uid: userData.referredBy,
+            type: "referral",
+            amount: commission,
+            status: "success",
+            note: `₹${commission} Bet Commission (${commissionPct}%) from ${identifier}'s bet`,
+            createdAt: Date.now(),
+          });
+
+          tx.set(db.collection("notifications").doc(), {
+            uid: userData.referredBy,
+            title: "🎁 Bet Commission Earned!",
+            body: `You received a ₹${commission} bonus commission (${commissionPct}%) from a referred player's bet! Available to play!`,
+            read: false,
+            createdAt: Date.now(),
+          });
+        }
+      }
 
       const betRef = db.collection("bets").doc();
       tx.set(betRef, {

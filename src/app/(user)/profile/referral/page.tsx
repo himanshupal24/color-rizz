@@ -10,6 +10,7 @@ import type { ReferralReward } from "@/lib/types";
 
 interface ReferralData {
   referralCode: string;
+  referredBy?: string | null;
   balances: {
     cashBalance: number;
     bonusBalance: number;
@@ -39,6 +40,9 @@ export default function ReferralPage() {
   const [qr, setQr] = useState("");
   const [data, setData] = useState<ReferralData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [inputCode, setInputCode] = useState("");
+  const [applyingCode, setApplyingCode] = useState(false);
+  const [hasAppliedRef, setHasAppliedRef] = useState(false);
 
   const referralCode = profile?.referralCode || data?.referralCode || "";
   const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -72,6 +76,48 @@ export default function ReferralPage() {
     fetchReferralStats();
   }, [user]);
 
+  async function handleApplyReferralCode(e: React.FormEvent) {
+    e.preventDefault();
+    if (!user) return;
+    const cleanCode = inputCode.trim().toUpperCase();
+    if (!cleanCode) {
+      toast.error("Please enter a referral code");
+      return;
+    }
+
+    setApplyingCode(true);
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch("/api/user/apply-referral", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ referralCode: cleanCode }),
+      });
+      const resData = await res.json();
+      if (!res.ok) {
+        throw new Error(resData.error || "Failed to apply referral code");
+      }
+
+      toast.success("Referral code applied successfully!");
+      setInputCode("");
+      setHasAppliedRef(true);
+      const statsRes = await fetch("/api/user/referrals", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (statsRes.ok) {
+        const json = await statsRes.json();
+        setData(json);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to apply referral code");
+    } finally {
+      setApplyingCode(false);
+    }
+  }
+
   function copyCode() {
     if (!referralCode) return;
     void navigator.clipboard.writeText(referralCode);
@@ -87,7 +133,7 @@ export default function ReferralPage() {
   function shareWhatsApp() {
     if (!link) return;
     const msg = encodeURIComponent(
-      `🎉 Join me on Color Rizz! Use my referral code *${referralCode}* to get ₹100 instant bonus:\n${link}`
+      `🎉 Join me on Win Win Go! Use my referral code *${referralCode}* to get ₹300 instant bonus:\n${link}`
     );
     window.open(`https://api.whatsapp.com/send?text=${msg}`, "_blank");
   }
@@ -102,11 +148,11 @@ export default function ReferralPage() {
         <div className="mt-3">
           <div className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-0.5 text-xs font-medium backdrop-blur-sm">
             <Sparkles className="h-3.5 w-3.5 text-yellow-300" />
-            <span>Invite & Earn ₹100</span>
+            <span>Invite & Earn ₹300</span>
           </div>
           <h1 className="mt-2 text-xl sm:text-2xl font-bold tracking-tight">Referral Program</h1>
           <p className="mt-1 text-xs text-blue-100">
-            Get ₹100 instant bonus directly into your game wallet for every friend you invite!
+            Get ₹300 instant bonus directly into your game wallet for every friend you invite!
           </p>
         </div>
       </div>
@@ -162,6 +208,50 @@ export default function ReferralPage() {
             </div>
           </div>
         </div>
+
+        {/* Apply Inviter's Referral Code Card */}
+        {!profile?.referredBy && !data?.referredBy && !hasAppliedRef ? (
+          <div className="rounded-3xl bg-white p-5 shadow-xs border border-indigo-100 space-y-3">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-50 text-purple-600 shrink-0">
+                <Gift className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-800">Have a Referral / Inviter Code?</h3>
+                <p className="text-[11px] text-slate-500">
+                  Enter your inviter&apos;s referral code to link your account. (Only 1 code allowed per user)
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleApplyReferralCode} className="flex gap-2">
+              <input
+                type="text"
+                placeholder="e.g. REF12345"
+                value={inputCode}
+                onChange={(e) => setInputCode(e.target.value.toUpperCase())}
+                className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs font-mono font-bold uppercase tracking-wider text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                type="submit"
+                disabled={applyingCode || !inputCode.trim()}
+                className="rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:from-purple-700 hover:to-indigo-700 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
+              >
+                {applyingCode ? "Applying..." : "Apply Code"}
+              </button>
+            </form>
+          </div>
+        ) : (
+          <div className="rounded-2xl bg-emerald-50 p-3.5 border border-emerald-200 flex items-center justify-between text-xs text-emerald-800">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+              <span className="font-semibold">Inviter Referral Code Linked</span>
+            </div>
+            <span className="font-mono text-[10px] font-bold text-emerald-700 bg-emerald-100/90 px-2 py-0.5 rounded-md border border-emerald-200">
+              LOCKED (1 Max)
+            </span>
+          </div>
+        )}
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-3">
@@ -219,7 +309,11 @@ export default function ReferralPage() {
           <ul className="mt-2.5 space-y-1.5 text-xs text-indigo-800/90">
             <li className="flex items-start gap-1.5">
               <ArrowRight className="h-3 w-3 mt-0.5 shrink-0 text-indigo-500" />
-              <span><strong>₹100 Instant Bonus:</strong> Immediately credited to your playable balance when your friend registers.</span>
+              <span><strong>₹300 Instant Bonus:</strong> Immediately credited to your playable bonus balance when your friend registers.</span>
+            </li>
+            <li className="flex items-start gap-1.5">
+              <ArrowRight className="h-3 w-3 mt-0.5 shrink-0 text-indigo-500" />
+              <span><strong>Bet Commission:</strong> Earn bonus credit on every bet placed by your referred friends (play-only balance).</span>
             </li>
             <li className="flex items-start gap-1.5">
               <ArrowRight className="h-3 w-3 mt-0.5 shrink-0 text-indigo-500" />
@@ -260,7 +354,7 @@ export default function ReferralPage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-1 text-xs font-bold text-emerald-600">
-                    <span>+₹100</span>
+                    <span>+₹300</span>
                     <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
                       Credited
                     </span>

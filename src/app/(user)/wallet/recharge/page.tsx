@@ -47,7 +47,7 @@ export default function RechargePage() {
     }
     const userIdentifier = profile?.email || profile?.phone || "User";
     const message = encodeURIComponent(
-      `Hello Support, I want to recharge ₹${amount} on Color Rizz for account: ${userIdentifier}`
+      `Hello Support, I want to recharge ₹${amount} on Win Win Go for account: ${userIdentifier}`
     );
     const fullUrl = normalized.includes("?")
       ? `${normalized}&text=${message}`

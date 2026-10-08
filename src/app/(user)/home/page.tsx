@@ -66,7 +66,7 @@ export default function HomePage() {
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="font-extrabold text-slate-800 text-sm tracking-tight">COLOR RIZZ</span>
+              <span className="font-extrabold text-slate-800 text-sm tracking-tight">WIN WIN GO</span>
               <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-bold text-emerald-600">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 LIVE

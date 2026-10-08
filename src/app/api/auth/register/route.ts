@@ -90,7 +90,7 @@ export async function POST(request: Request) {
 
   const referralCode = generateReferralCode();
   const settingsSnap = await db.doc("settings/game").get();
-  const referralBonusAmount = settingsSnap.data()?.referralBonusAmount ?? 100;
+  const referralBonusAmount = settingsSnap.data()?.referralBonusAmount ?? 300;
   const wagerMultiplier = settingsSnap.data()?.referralWageringMultiplier ?? 1.0;
 
   const userDocRef = db.doc(`users/${uid}`);

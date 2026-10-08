@@ -1,6 +1,6 @@
-# Color Rizz 🎨
+# Win Win Go 🎨
 
-A modern, high-performance colour prediction & trading platform built with **Next.js 16 (App Router)**, **React 19**, **Tailwind CSS v4**, and **Firebase**.
+A modern, high-performance colour prediction platform built with **Next.js 16 (App Router)**, **React 19**, **Tailwind CSS v4**, and **Firebase**.
 
 ---
 

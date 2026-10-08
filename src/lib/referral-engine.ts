@@ -57,7 +57,7 @@ export async function processReferralRewardOnRegister(
   referrerUid: string,
   newUserId: string,
   newUserPhone: string,
-  bonusAmount = 100,
+  bonusAmount = 300,
   wagerMultiplier = 1.0,
 ): Promise<boolean> {
   // Prevent self-referral

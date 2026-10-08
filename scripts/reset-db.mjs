@@ -114,7 +114,7 @@ async function initializeDefaults() {
     upiId: process.env.NEXT_PUBLIC_UPI_ID || "support@upi",
     telegramSupportUrl: "https://t.me/your_support_username",
     referralBonusPercent: 10,
-    referralBonusAmount: 100,
+    referralBonusAmount: 300,
     referralWageringMultiplier: 1.0,
   };
 
