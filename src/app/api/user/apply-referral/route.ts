@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { verifyIdToken } from "@/lib/api-auth";
 import { getAdminDb } from "@/lib/firebase/admin";
-import { processReferralRewardOnRegister } from "@/lib/referral-engine";
-import type { UserProfile } from "@/lib/types";
+import { calculateUserBalances } from "@/lib/referral-engine";
+import type { ReferralReward, UserProfile } from "@/lib/types";
 
 export async function POST(request: Request) {
   const decoded = await verifyIdToken(request as import("next/server").NextRequest);
@@ -64,8 +64,18 @@ export async function POST(request: Request) {
     const referralBonusAmount = settingsSnap.data()?.referralBonusAmount ?? 300;
     const wagerMultiplier = settingsSnap.data()?.referralWageringMultiplier ?? 1.0;
 
+    const rewardDocId = `${referrerUid}_${uid}`;
+    const rewardRef = db.doc(`referral_rewards/${rewardDocId}`);
+    const referrerRef = db.doc(`users/${referrerUid}`);
+
     await db.runTransaction(async (tx) => {
-      const freshUserSnap = await tx.get(userDocRef);
+      // 1. ALL READS FIRST (Strict Firestore transaction compliance)
+      const [freshUserSnap, rewardSnap, referrerSnap] = await Promise.all([
+        tx.get(userDocRef),
+        tx.get(rewardRef),
+        tx.get(referrerRef),
+      ]);
+
       if (!freshUserSnap.exists) throw new Error("User not found");
       const freshData = freshUserSnap.data() as UserProfile;
 
@@ -73,21 +83,62 @@ export async function POST(request: Request) {
         throw new Error("A referral code has already been applied to this account.");
       }
 
+      if (!referrerSnap.exists) {
+        throw new Error("Referrer account not found");
+      }
+
+      // 2. ALL WRITES SECOND
       tx.update(userDocRef, {
         referredBy: referrerUid,
         referralCreatedAt: Date.now(),
       });
 
-      const userPhoneOrEmail = userData.email || userData.phone || "User";
-      await processReferralRewardOnRegister(
-        db,
-        tx,
-        referrerUid,
-        uid,
-        userPhoneOrEmail,
-        referralBonusAmount,
-        wagerMultiplier,
-      );
+      if (!rewardSnap.exists) {
+        const referrerData = referrerSnap.data() as UserProfile;
+        const balances = calculateUserBalances(referrerData);
+        const newBonusBalance = Number((balances.bonusBalance + referralBonusAmount).toFixed(2));
+        const newPlayableBalance = Number((balances.playableBalance + referralBonusAmount).toFixed(2));
+
+        tx.update(referrerRef, {
+          bonusBalance: newBonusBalance,
+          balance: newPlayableBalance,
+        });
+
+        const userPhoneOrEmail = userData.email || userData.phone || "User";
+        const rewardRecord: ReferralReward = {
+          id: rewardDocId,
+          referrerUid,
+          referrerPhone: referrerData.phone || referrerData.email || "",
+          referredUid: uid,
+          referredPhone: userPhoneOrEmail,
+          amount: referralBonusAmount,
+          type: "REFERRAL_BONUS",
+          status: "credited",
+          wagerRequirement: Number((referralBonusAmount * wagerMultiplier).toFixed(2)),
+          wagerProgress: 0,
+          createdAt: Date.now(),
+          creditedAt: Date.now(),
+          notes: `Referral promotional bonus credited for inviting ${userPhoneOrEmail}`,
+        };
+        tx.set(rewardRef, rewardRecord);
+
+        tx.set(db.collection("transactions").doc(), {
+          uid: referrerUid,
+          type: "referral",
+          amount: referralBonusAmount,
+          status: "success",
+          note: `₹${referralBonusAmount} Referral Bonus for inviting ${userPhoneOrEmail}`,
+          createdAt: Date.now(),
+        });
+
+        tx.set(db.collection("notifications").doc(), {
+          uid: referrerUid,
+          title: "🎁 Referral Bonus Credited!",
+          body: `You received a ₹${referralBonusAmount} promotional bonus for inviting ${userPhoneOrEmail}. Available to play!`,
+          read: false,
+          createdAt: Date.now(),
+        });
+      }
     });
 
     return NextResponse.json({

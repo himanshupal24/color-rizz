@@ -65,11 +65,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     const ref = doc(db, "users", user.uid);
-    const unsub = onSnapshot(ref, (snap) => {
+    const unsub = onSnapshot(ref, async (snap) => {
       if (snap.exists()) {
         setProfile({ uid: snap.id, ...snap.data() } as UserProfile);
       } else {
-        setProfile(null);
+        // Self-heal: If user is authenticated in Firebase Auth but has no Firestore document
+        try {
+          const token = await user.getIdToken();
+          await fetch("/api/auth/google-sync", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({}),
+          });
+        } catch {
+          // ignore background sync errors
+        }
       }
     });
     return () => unsub();
@@ -126,7 +139,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           phone,
         }),
       });
-      const data = await res.json();
+
+      let data: { ok?: boolean; error?: string } = {};
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error(res.ok ? "Invalid server response" : `Server error (${res.status})`);
+      }
+
       if (!res.ok) {
         throw new Error(data.error ?? "Registration failed");
       }
