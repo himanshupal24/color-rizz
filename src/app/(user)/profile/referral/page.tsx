@@ -309,7 +309,7 @@ export default function ReferralPage() {
           <ul className="mt-2.5 space-y-1.5 text-xs text-indigo-800/90">
             <li className="flex items-start gap-1.5">
               <ArrowRight className="h-3 w-3 mt-0.5 shrink-0 text-indigo-500" />
-              <span><strong>₹300 Instant Bonus:</strong> Immediately credited to your playable bonus balance when your friend registers.</span>
+              <span><strong>₹300 Instant Bonus:</strong> Both you and your friend immediately receive ₹300 playable bonus balance when they register or apply your code.</span>
             </li>
             <li className="flex items-start gap-1.5">
               <ArrowRight className="h-3 w-3 mt-0.5 shrink-0 text-indigo-500" />

@@ -88,9 +88,33 @@ export async function POST(request: Request) {
       }
 
       // 2. ALL WRITES SECOND
+      const userBalances = calculateUserBalances(freshData);
+      const userNewBonusBalance = Number((userBalances.bonusBalance + referralBonusAmount).toFixed(2));
+      const userNewPlayableBalance = Number((userBalances.playableBalance + referralBonusAmount).toFixed(2));
+
       tx.update(userDocRef, {
         referredBy: referrerUid,
         referralCreatedAt: Date.now(),
+        bonusBalance: userNewBonusBalance,
+        balance: userNewPlayableBalance,
+      });
+
+      // User ledger and notification
+      tx.set(db.collection("transactions").doc(), {
+        uid,
+        type: "referral",
+        amount: referralBonusAmount,
+        status: "success",
+        note: `₹${referralBonusAmount} Welcome Bonus for applying referral code`,
+        createdAt: Date.now(),
+      });
+
+      tx.set(db.collection("notifications").doc(), {
+        uid,
+        title: "🎁 Welcome Bonus Credited!",
+        body: `You received a ₹${referralBonusAmount} welcome bonus for applying an invite code! Available to play now.`,
+        read: false,
+        createdAt: Date.now(),
       });
 
       if (!rewardSnap.exists) {

@@ -128,15 +128,16 @@ export async function POST(request: Request) {
         }
 
         // 2. ALL WRITES SECOND
+        const welcomeBonus = referredBy ? referralBonusAmount : 0;
         tx.set(userDocRef, {
           uid,
           email,
           phone: phone || "",
           displayName: displayName || email.split("@")[0],
           role: "user",
-          balance: 0,
+          balance: welcomeBonus,
           cashBalance: 0,
-          bonusBalance: 0,
+          bonusBalance: welcomeBonus,
           unlockedBonusBalance: 0,
           totalWagered: 0,
           referralCode,
@@ -194,6 +195,24 @@ export async function POST(request: Request) {
             uid: referredBy,
             title: "🎁 Referral Bonus Credited!",
             body: `You received a ₹${referralBonusAmount} promotional bonus for inviting ${phone || email}. Available to play!`,
+            read: false,
+            createdAt: Date.now(),
+          });
+
+          // Ledger & notification for newly registered friend
+          tx.set(db.collection("transactions").doc(), {
+            uid,
+            type: "referral",
+            amount: referralBonusAmount,
+            status: "success",
+            note: `₹${referralBonusAmount} Welcome Referral Bonus for joining with invite code`,
+            createdAt: Date.now(),
+          });
+
+          tx.set(db.collection("notifications").doc(), {
+            uid,
+            title: "🎁 Welcome Bonus Credited!",
+            body: `You received a ₹${referralBonusAmount} welcome bonus for joining with a referral code. It is immediately available to play!`,
             read: false,
             createdAt: Date.now(),
           });
